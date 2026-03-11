@@ -1,115 +1,584 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VERDRIFT | SGI_TERMINAL v2.0</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <style>
+        :root {
+            --bg-base: #050505;
+            --bg-surface: #0f0f11;
+            --bg-elevated: rgba(25, 25, 28, 0.75);
+            --border-subtle: rgba(255, 255, 255, 0.07);
+            --border-highlight: rgba(255, 255, 255, 0.14);
+            --text-primary: #ffffff;
+            --text-secondary: #888891;
+            --text-tertiary: #55555a;
+            --accent-green: #34d399;
+            --accent-red: #ef4444;
+            --spring-easing: cubic-bezier(0.175, 0.885, 0.32, 1.1);
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        #drift-canvas {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            opacity: 0.65;
+            pointer-events: none;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 32px;
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 0.8px;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-subtle);
+            backdrop-filter: blur(12px);
+            z-index: 200;
+        }
+        .hud-live { display: flex; align-items: center; gap: 8px; }
+        .dot { width: 7px; height: 7px; background: var(--accent-green); border-radius: 50%; box-shadow: 0 0 12px var(--accent-green); animation: pulse 2s infinite; }
+        @keyframes pulse { 50% { opacity: 0.4; } }
+        .drift-score {
+            font-family: ui-monospace, "SF Mono", monospace;
+            font-size: 13px;
+            color: var(--accent-green);
+            letter-spacing: 1px;
+        }
 
-<title>Verdrift</title>
+        main {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+        /* SIDEBAR — MARKETS FEED */
+        #sidebar {
+            width: 260px;
+            background: var(--bg-surface);
+            border-right: 1px solid var(--border-subtle);
+            padding: 24px 16px;
+            overflow-y: auto;
+            font-size: 13px;
+        }
+        .market-item {
+            padding: 14px 16px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.3s var(--spring-easing);
+            border: 1px solid transparent;
+        }
+        .market-item.active, .market-item:hover {
+            background: var(--bg-elevated);
+            border-color: var(--border-highlight);
+        }
+        .market-item .id { font-size: 10px; color: var(--text-tertiary); margin-bottom: 4px; }
 
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+        /* CENTER TERMINAL */
+        #terminal {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            position: relative;
+            perspective: 1400px;
+        }
+        #card-container {
+            width: 100%;
+            max-width: 520px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 48px 40px;
+            box-shadow: 0 32px 80px -20px rgba(0,0,0,0.9),
+                        inset 0 1px 0 rgba(255,255,255,0.06);
+            transition: transform 0.4s var(--spring-easing);
+            position: relative;
+            overflow: hidden;
+        }
+        .card-meta {
+            font-family: ui-monospace, "SF Mono", monospace;
+            font-size: 11px;
+            color: var(--text-tertiary);
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 28px;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+        }
+        .card-title {
+            font-size: 26px;
+            line-height: 1.3;
+            font-weight: 600;
+            letter-spacing: -0.03em;
+            margin-bottom: 36px;
+            color: #f8f8f8;
+        }
+        .data-panel {
+            background: rgba(0,0,0,0.45);
+            border: 1px solid var(--border-subtle);
+            border-radius: 10px;
+            padding: 22px;
+            margin-bottom: 36px;
+        }
+        .sparkline {
+            width: 100%;
+            height: 48px;
+            position: relative;
+            margin-bottom: 14px;
+        }
+        .sparkline svg { width: 100%; height: 100%; }
+        .sparkline path { fill: none; stroke: var(--accent-green); stroke-width: 2.5; stroke-linecap: round; }
+        .action-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        .btn-strike {
+            padding: 20px;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: 0.6px;
+            cursor: pointer;
+            transition: all 0.3s var(--spring-easing);
+        }
+        .btn-yes { background: var(--text-primary); color: var(--bg-base); }
+        .btn-no { background: transparent; color: var(--text-primary); border: 1px solid var(--border-highlight); }
 
-<style>
+        /* OVERLAY */
+        #glass-overlay {
+            position: absolute;
+            inset: 0;
+            background: var(--bg-elevated);
+            backdrop-filter: blur(16px);
+            border-radius: 16px;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            z-index: 300;
+        }
+        #glass-overlay.active { display: flex; }
+        .timer-ring {
+            font-size: 72px;
+            font-weight: 300;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -3px;
+            margin-bottom: 12px;
+        }
 
-body{
-background:#050505;
-color:white;
-font-family:Inter, sans-serif;
-display:flex;
-align-items:center;
-justify-content:center;
-height:100vh;
-margin:0;
-}
+        /* RIGHT PANEL — DRIFT LOG */
+        #right-panel {
+            width: 260px;
+            background: var(--bg-surface);
+            border-left: 1px solid var(--border-subtle);
+            padding: 24px 16px;
+            overflow-y: auto;
+            font-size: 13px;
+        }
+        .log-entry {
+            padding: 12px 14px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            font-size: 12.5px;
+        }
 
-.container{
-text-align:center;
-max-width:700px;
-}
-
-.logo{
-font-size:70px;
-font-weight:600;
-letter-spacing:4px;
-margin-bottom:10px;
-}
-
-.tagline{
-font-size:22px;
-color:#888;
-margin-bottom:40px;
-}
-
-.example{
-background:#0f0f0f;
-border:1px solid #1a1a1a;
-padding:30px;
-border-radius:12px;
-margin-bottom:30px;
-}
-
-.question{
-font-size:20px;
-margin-bottom:25px;
-}
-
-.buttons{
-display:flex;
-gap:20px;
-justify-content:center;
-}
-
-button{
-padding:14px 28px;
-border-radius:8px;
-border:none;
-font-size:16px;
-cursor:pointer;
-}
-
-.yes{
-background:white;
-color:black;
-}
-
-.no{
-background:#1c1c1c;
-color:white;
-border:1px solid #333;
-}
-
-.waitlist{
-margin-top:30px;
-padding:14px 26px;
-background:white;
-color:black;
-}
-
-</style>
-
+        .hidden { display: none !important; }
+    </style>
 </head>
-
 <body>
+    <canvas id="drift-canvas"></canvas>
+    
+    <header>
+        <div class="hud-live"><span class="dot"></span> VERDRIFT ALPHA v2.0</div>
+        <div class="drift-score">DRIFT SCORE <span id="score-value">047</span></div>
+        <div>[ <span id="hud-count">0</span>/12 ] SIGNAL LOCKED</div>
+    </header>
 
-<div class="container">
+    <main>
+        <!-- LEFT: MARKETS LIST -->
+        <div id="sidebar">
+            <div style="font-size:10px; letter-spacing:1px; color:#55555a; margin-bottom:16px; padding-left:8px;">CURRENT PROXY REALITIES</div>
+            <div id="markets-list"></div>
+        </div>
 
-<div class="logo">VERDRIFT</div>
+        <!-- CENTER: TERMINAL -->
+        <div id="terminal">
+            <div id="card-container">
+                <div id="reality-core">
+                    <div class="card-meta">
+                        <span id="date" style="color:var(--accent-red);">MAR 11 2026</span>
+                        <span id="pm-id">PM-SIG-00</span>
+                    </div>
+                    <h1 class="card-title" id="r-title">REALITY SIGNAL LOADING...</h1>
+                    
+                    <div class="data-panel">
+                        <div class="data-header" style="margin-bottom:8px;">
+                            <span>PROXY MARKET DELTA</span>
+                            <span class="data-value" id="r-odds">--% YES</span>
+                        </div>
+                        <div class="sparkline">
+                            <svg viewBox="0 0 100 48" preserveAspectRatio="none">
+                                <path id="spark-path" d="M0,30 Q10,25 20,35 T40,20 T60,10 T80,25 T100,5"/>
+                            </svg>
+                        </div>
+                        <div class="data-header" style="color:var(--text-tertiary);">
+                            <span>MOMENTUM</span>
+                            <span id="r-momentum">--</span>
+                        </div>
+                    </div>
+                    
+                    <div class="action-grid">
+                        <button class="btn-strike btn-yes" onclick="strike('YES')">STRIKE YES</button>
+                        <button class="btn-strike btn-no" onclick="strike('NO')">STRIKE NO</button>
+                    </div>
+                </div>
 
-<div class="tagline">Take a judgement.</div>
+                <!-- GLASS OVERLAY -->
+                <div id="glass-overlay">
+                    <div id="undo-state">
+                        <div class="timer-ring" id="timer">3</div>
+                        <div style="font-family:ui-monospace,monospace;font-size:11px;letter-spacing:1.5px;color:var(--accent-green);margin-bottom:32px;">SYSTEM LOCKING</div>
+                        <button class="btn-abort" onclick="abort()">ABORT LOCK</button>
+                    </div>
+                    <div id="settled-state" class="hidden">
+                        <div id="result-status" style="font-size:15px;font-weight:600;letter-spacing:1px;margin-bottom:12px;">JUDGMENT IMMUTABLE</div>
+                        <div id="result-text" style="max-width:280px;font-size:13.5px;line-height:1.5;color:var(--text-secondary);"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-<div class="example">
+        <!-- RIGHT: DRIFT LOG -->
+        <div id="right-panel">
+            <div style="font-size:10px;letter-spacing:1px;color:#55555a;margin-bottom:16px;padding-left:8px;">STRIKE HISTORY</div>
+            <div id="drift-log"></div>
+        </div>
+    </main>
 
-<div class="question">
-Will AI replace 30% of white-collar jobs before 2035?
-</div>
+    <script>
+        // VERDRIFT VISION REITERATED: Cold precision reality arbitration terminal.
+        // Every interaction reinforces signal integrity and drift mechanics.
+        // No external data claims — pure proxy market simulation for alpha users.
 
-<div class="buttons">
-<button class="yes">YES</button>
-<button class="no">NO</button>
-</div>
+        const realities = [
+            { id: "PM-CRD-12", title: "Will Brent Crude oil rebound and close above $100/bbl before March 15 after today's $30 intraday crash?", yes: 34, momentum: "CRASH TRENDING", path: "M0,10 Q10,15 20,5 T40,25 T60,35 T80,38 T100,35" },
+            { id: "PM-HRZ-88", title: "Will the White House officially confirm US Navy escorts for commercial tankers in Hormuz by Friday 18:00 EST?", yes: 62, momentum: "+14% YES", path: "M0,35 Q15,30 25,35 T45,20 T65,15 T85,5 T100,2" },
+            { id: "PM-KHM-04", title: "Will Iranian State Media broadcast a live, verified address by Mojtaba Khamenei before March 15?", yes: 18, momentum: "-4% NOISE", path: "M0,20 Q20,22 40,25 T70,30 T100,38" },
+            { id: "PM-TEC-29", title: "Will NVIDIA market cap exceed $4.2T by end of Q1 2026 following Blackwell ramp?", yes: 71, momentum: "+9% MOMENTUM", path: "M0,5 Q15,12 30,8 T55,22 T80,15 T100,28" },
+            { id: "PM-ASI-67", title: "Will China announce full semiconductor export restrictions on advanced AI chips by April 1?", yes: 43, momentum: "VOLATILE", path: "M0,28 Q12,18 28,32 T50,12 T75,25 T100,19" },
+            { id: "PM-CYB-91", title: "Will a major Western government confirm state-sponsored quantum decryption breach before March 20?", yes: 27, momentum: "-11% FEAR", path: "M0,38 Q20,30 35,40 T60,22 T85,35 T100,29" }
+        ];
 
-</div>
+        let currentIdx = 0;
+        let driftScore = 47;
+        let lockedCount = 0;
+        let history = [];
+        let timerInterval;
+        let currentChoice = "";
+        let oddsInterval;
 
-<button class="waitlist">Join Early Access</button>
+        // GSAP timeline helper
+        function animateCard() {
+            gsap.fromTo("#card-container", 
+                { scale: 0.92, y: 30, rotationX: 8, opacity: 0 },
+                { scale: 1, y: 0, rotationX: 0, opacity: 1, duration: 0.8, ease: "power3.out" }
+            );
+        }
 
-</div>
+        // Canvas Reality Drift Particles — core VERDRIFT visual language
+        const canvas = document.getElementById('drift-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        let w, h;
 
+        class Particle {
+            constructor() {
+                this.reset();
+            }
+            reset() {
+                this.x = Math.random() * w;
+                this.y = Math.random() * h;
+                this.vx = (Math.random() - 0.5) * 0.6;
+                this.vy = (Math.random() - 0.5) * 0.6;
+                this.size = Math.random() * 2.2 + 0.8;
+                this.alpha = Math.random() * 0.6 + 0.3;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                if (this.x < 0 || this.x > w) this.vx *= -1;
+                if (this.y < 0 || this.y > h) this.vy *= -1;
+                this.alpha = 0.3 + Math.sin(Date.now() / 800) * 0.3;
+            }
+            draw() {
+                ctx.fillStyle = `rgba(52, 211, 153, ${this.alpha})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function resizeCanvas() {
+            w = canvas.width = window.innerWidth;
+            h = canvas.height = window.innerHeight;
+        }
+
+        function initParticles() {
+            particles = [];
+            for (let i = 0; i < 92; i++) {
+                particles.push(new Particle());
+            }
+        }
+
+        function connectParticles() {
+            for (let i = 0; i < particles.length; i++) {
+                for (let j = i + 1; j < particles.length; j++) {
+                    const dx = particles[i].x - particles[j].x;
+                    const dy = particles[i].y - particles[j].y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 130) {
+                        ctx.strokeStyle = `rgba(52, 211, 153, ${0.12 * (130 - dist) / 130})`;
+                        ctx.lineWidth = 0.8;
+                        ctx.beginPath();
+                        ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(particles[j].x, particles[j].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        function animateParticles() {
+            ctx.clearRect(0, 0, w, h);
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+            connectParticles();
+            requestAnimationFrame(animateParticles);
+        }
+
+        // Render current reality
+        function renderReality() {
+            const r = realities[currentIdx];
+            document.getElementById('pm-id').textContent = r.id;
+            document.getElementById('r-title').textContent = r.title;
+            document.getElementById('r-odds').textContent = `${r.yes}% YES`;
+            document.getElementById('r-momentum').textContent = r.momentum;
+            document.getElementById('spark-path').setAttribute('d', r.path);
+
+            // Highlight active in sidebar
+            document.querySelectorAll('.market-item').forEach((el, i) => {
+                el.classList.toggle('active', i === currentIdx);
+            });
+
+            animateCard();
+        }
+
+        // Build sidebar list
+        function buildMarketsList() {
+            const container = document.getElementById('markets-list');
+            container.innerHTML = '';
+            realities.forEach((r, i) => {
+                const div = document.createElement('div');
+                div.className = 'market-item';
+                div.innerHTML = `
+                    <div class="id">${r.id}</div>
+                    <div style="line-height:1.35;font-size:13.2px;">${r.title.substring(0, 68)}...</div>
+                `;
+                div.onclick = () => {
+                    currentIdx = i;
+                    renderReality();
+                };
+                container.appendChild(div);
+            });
+        }
+
+        // Live odds fluctuation (pure simulation — stays true to proxy market delta)
+        function startLiveOdds() {
+            if (oddsInterval) clearInterval(oddsInterval);
+            oddsInterval = setInterval(() => {
+                const r = realities[currentIdx];
+                const change = Math.floor(Math.random() * 5) - 2;
+                r.yes = Math.max(8, Math.min(92, r.yes + change));
+                document.getElementById('r-odds').textContent = `${r.yes}% YES`;
+            }, 4200);
+        }
+
+        // Strike logic with GSAP + audio
+        let audioCtx;
+        function playBeep(freq, duration, type = 'sine') {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.value = freq;
+            gain.gain.value = 0.12;
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            setTimeout(() => { osc.stop(); }, duration);
+        }
+
+        function strike(choice) {
+            currentChoice = choice;
+            const overlay = document.getElementById('glass-overlay');
+            const timerEl = document.getElementById('timer');
+            let sec = 3;
+            timerEl.textContent = sec;
+            overlay.classList.add('active');
+            document.getElementById('undo-state').classList.remove('hidden');
+            document.getElementById('settled-state').classList.add('hidden');
+
+            playBeep(820, 80);
+
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                sec--;
+                timerEl.textContent = sec;
+                playBeep(620, 60);
+                if (sec <= 0) {
+                    clearInterval(timerInterval);
+                    lockStrike();
+                }
+            }, 980);
+        }
+
+        function abort() {
+            clearInterval(timerInterval);
+            document.getElementById('glass-overlay').classList.remove('active');
+            playBeep(320, 120, 'sawtooth');
+        }
+
+        function lockStrike() {
+            clearInterval(timerInterval);
+            lockedCount++;
+            document.getElementById('hud-count').textContent = lockedCount;
+
+            const r = realities[currentIdx];
+            const isMinority = (currentChoice === 'YES' && r.yes < 50) || (currentChoice === 'NO' && r.yes >= 50);
+            const points = isMinority ? 14 : 6;
+            driftScore = Math.min(99, driftScore + points);
+            document.getElementById('score-value').textContent = String(driftScore).padStart(3, '0');
+
+            // Log entry
+            const logContainer = document.getElementById('drift-log');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `
+                <span style="color:${isMinority ? '#34d399' : '#888891'};">${currentChoice}</span> 
+                <span style="opacity:0.6;">${r.id}</span><br>
+                <span style="font-size:11px;color:#55555a;">+${points} α • ${isMinority ? 'CONSENSUS BREACH' : 'ALIGNED'}</span>
+            `;
+            logContainer.prepend(entry);
+            if (logContainer.children.length > 6) logContainer.removeChild(logContainer.lastChild);
+
+            // Show result
+            document.getElementById('undo-state').classList.add('hidden');
+            const settled = document.getElementById('settled-state');
+            settled.classList.remove('hidden');
+            document.getElementById('result-status').textContent = isMinority ? "BETRAYING CONSENSUS" : "FOLLOWING THE HERD";
+            document.getElementById('result-status').style.color = isMinority ? "var(--accent-green)" : "var(--text-tertiary)";
+            document.getElementById('result-text').textContent = isMinority 
+                ? "Maximum alpha extracted. Positioned against market majority." 
+                : "Safe margin locked. Instinct aligned with proxy signal.";
+
+            playBeep(isMinority ? 1240 : 680, 280, 'triangle');
+
+            // Auto advance after 2.8s
+            setTimeout(() => {
+                document.getElementById('glass-overlay').classList.remove('active');
+                currentIdx = (currentIdx + 1) % realities.length;
+                renderReality();
+            }, 2800);
+        }
+
+        // 3D mouse tilt on card
+        function addCardTilt() {
+            const card = document.getElementById('card-container');
+            const term = document.getElementById('terminal');
+            
+            term.addEventListener('mousemove', (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = (e.clientX - rect.left) / rect.width;
+                const y = (e.clientY - rect.top) / rect.height;
+                
+                const rotX = (y - 0.5) * -18;
+                const rotY = (x - 0.5) * 26;
+                
+                card.style.transform = `perspective(1400px) rotateX(${rotX}deg) rotateY(${rotY}deg)`;
+            });
+            
+            term.addEventListener('mouseleave', () => {
+                gsap.to(card, { rotationX: 0, rotationY: 0, duration: 0.8, ease: "power2.out" });
+            });
+        }
+
+        // Keyboard navigation (elite terminal feel)
+        document.addEventListener('keydown', e => {
+            if (e.key === 'ArrowRight') {
+                currentIdx = (currentIdx + 1) % realities.length;
+                renderReality();
+            }
+            if (e.key === 'ArrowLeft') {
+                currentIdx = (currentIdx - 1 + realities.length) % realities.length;
+                renderReality();
+            }
+        });
+
+        // Init everything
+        window.onload = () => {
+            resizeCanvas();
+            initParticles();
+            animateParticles();
+            window.addEventListener('resize', () => { resizeCanvas(); initParticles(); });
+
+            buildMarketsList();
+            renderReality();
+            startLiveOdds();
+            addCardTilt();
+            animateCard();
+
+            // Initial score animation
+            gsap.fromTo("#score-value", { innerText: 0 }, {
+                innerText: 47,
+                duration: 1.8,
+                ease: "power2.out",
+                snap: { innerText: 1 }
+            });
+
+            // VERDRIFT integrity pulse
+            setInterval(() => {
+                const dot = document.querySelector('.dot');
+                gsap.to(dot, { scale: 1.4, duration: 0.3, yoyo: true, repeat: 1 });
+            }, 2400);
+        };
+    </script>
 </body>
 </html>
