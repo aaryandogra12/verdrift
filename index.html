@@ -3,86 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VERDRIFT | SGI_TERMINAL v3.0</title>
+    <title>VERDRIFT | SGI_TERMINAL v3.1</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
     <style>
         :root {
             --bg-base: #050505;
             --bg-surface: #0a0a0c;
-            --bg-elevated: rgba(20, 20, 24, 0.85);
-            --border-subtle: rgba(255,255,255,0.06);
-            --border-highlight: rgba(52,211,153,0.2);
+            --bg-elevated: rgba(18,18,22,0.94);
+            --border-subtle: rgba(255,255,255,0.055);
+            --border-highlight: rgba(52,211,153,0.18);
             --text-primary: #ffffff;
-            --text-secondary: #a0a0a8;
-            --accent-green: #34d399;
-            --spring-easing: cubic-bezier(0.23, 1, 0.32, 1);
+            --text-secondary: #9a9aa4;
+            --accent: #34d399;
+            --spring: cubic-bezier(0.23,1,0.32,1);
         }
         * { box-sizing:border-box; margin:0; padding:0; user-select:none; }
         body {
-            background:#050505;
-            color:var(--text-primary);
+            background:#050505; color:var(--text-primary);
             font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",Inter,sans-serif;
             height:100vh; overflow:hidden; position:relative;
         }
-        #drift-canvas { position:fixed; inset:0; z-index:-1; opacity:0.85; }
+        #drift-canvas { position:fixed; inset:0; z-index:-1; opacity:0.65; }
         
         header {
-            padding:20px 40px; display:flex; justify-content:space-between; align-items:center;
-            font-size:12px; font-weight:500; letter-spacing:1px; color:var(--text-secondary);
+            padding:22px 40px; display:flex; justify-content:space-between; align-items:center;
+            font-size:12px; font-weight:500; letter-spacing:1.1px; color:var(--text-secondary);
             border-bottom:1px solid var(--border-subtle); backdrop-filter:blur(20px);
         }
-        .dot { width:8px; height:8px; background:var(--accent-green); border-radius:50%; box-shadow:0 0 20px var(--accent-green); animation:pulse 1.8s infinite; }
-        @keyframes pulse { 50% { opacity:0.3; } }
+        .dot { width:7px; height:7px; background:var(--accent); border-radius:50%; box-shadow:0 0 12px var(--accent); }
 
         main { display:flex; flex:1; overflow:hidden; }
         #sidebar, #right-panel {
-            width:240px; background:var(--bg-surface); padding:28px 16px; overflow-y:auto;
+            width:248px; background:var(--bg-surface); padding:32px 18px; overflow-y:auto;
             border-right/left:1px solid var(--border-subtle);
         }
         .market-item {
-            padding:16px; border-radius:12px; margin-bottom:10px; cursor:pointer;
-            transition:all 0.4s var(--spring-easing); border:1px solid transparent;
+            padding:16px 18px; border-radius:10px; margin-bottom:8px; cursor:pointer;
+            transition:all 0.4s var(--spring); border:1px solid transparent; font-size:13.5px;
         }
         .market-item:hover, .market-item.active { background:var(--bg-elevated); border-color:var(--border-highlight); }
 
-        #terminal {
-            flex:1; display:flex; align-items:center; justify-content:center; padding:40px; perspective:1600px;
-        }
+        #terminal { flex:1; display:flex; align-items:center; justify-content:center; padding:40px; perspective:1700px; }
         #card-container {
-            width:100%; max-width:540px; background:var(--bg-surface);
-            border:1px solid var(--border-subtle); border-radius:20px;
-            padding:52px 44px; position:relative; overflow:hidden;
-            box-shadow:0 40px 100px -20px rgba(0,0,0,0.95),
-                       inset 0 2px 0 rgba(255,255,255,0.08),
-                       0 0 80px -20px rgba(52,211,153,0.15);
-            transition:transform 0.5s var(--spring-easing);
+            width:100%; max-width:560px; background:var(--bg-surface);
+            border:1px solid var(--border-subtle); border-radius:18px;
+            padding:56px 48px; position:relative; overflow:hidden;
+            box-shadow:0 40px 110px -25px rgba(0,0,0,0.97),
+                       inset 0 1px 0 rgba(255,255,255,0.06);
         }
-        .card-meta { font-family:ui-monospace,monospace; font-size:11px; color:#666; display:flex; justify-content:space-between; margin-bottom:24px; }
-        .card-title { font-size:27px; line-height:1.25; font-weight:600; letter-spacing:-0.02em; margin-bottom:32px; }
+        .card-meta { font-family:ui-monospace,monospace; font-size:11px; color:#666; display:flex; justify-content:space-between; margin-bottom:28px; letter-spacing:1px; }
+        .card-title { font-size:26px; line-height:1.28; font-weight:600; letter-spacing:-0.015em; margin-bottom:36px; }
         
-        .data-panel {
-            background:rgba(0,0,0,0.5); border:1px solid var(--border-subtle); border-radius:12px;
-            padding:24px; margin-bottom:36px;
-        }
-        .sparkline { width:100%; height:50px; }
-        .sparkline path { stroke:var(--accent-green); stroke-width:3; fill:none; }
+        .data-panel { background:rgba(0,0,0,0.48); border:1px solid var(--border-subtle); border-radius:10px; padding:24px; margin-bottom:40px; }
+        .sparkline path { stroke:var(--accent); stroke-width:2.8; fill:none; }
 
-        .btn-strike {
-            padding:22px; border-radius:12px; font-size:15px; font-weight:600;
-            cursor:pointer; transition:all 0.3s var(--spring-easing);
+        .btn-lock {
+            padding:22px; border-radius:10px; font-size:14.5px; font-weight:600; letter-spacing:0.6px;
+            cursor:pointer; transition:all 0.35s var(--spring);
         }
         .btn-yes { background:#fff; color:#000; }
         .btn-no { background:transparent; border:1px solid var(--border-highlight); color:#fff; }
 
         #glass-overlay {
-            position:absolute; inset:0; background:rgba(10,10,15,0.92);
-            backdrop-filter:blur(24px); border-radius:20px; display:none;
+            position:absolute; inset:0; background:rgba(12,12,16,0.96);
+            backdrop-filter:blur(28px); border-radius:18px; display:none;
             align-items:center; justify-content:center; flex-direction:column;
         }
         #glass-overlay.active { display:flex; }
-        .timer-ring { font-size:88px; font-weight:300; letter-spacing:-4px; margin-bottom:16px; }
+        .timer-ring { font-size:92px; font-weight:300; letter-spacing:-5px; margin-bottom:12px; }
 
-        .log-entry { padding:14px; background:rgba(255,255,255,0.03); border-radius:10px; margin-bottom:10px; font-size:13px; }
+        .log-entry { padding:13px 15px; background:rgba(255,255,255,0.025); border-radius:8px; margin-bottom:9px; font-size:13px; }
         .hidden { display:none !important; }
     </style>
 </head>
@@ -90,67 +80,67 @@
     <canvas id="drift-canvas"></canvas>
     
     <header>
-        <div><span class="dot"></span> VERDRIFT ALPHA v3.0</div>
-        <div style="color:var(--accent-green);font-family:monospace;">DRIFT SCORE <span id="score-value">083</span></div>
-        <div>[ <span id="hud-count">0</span>/∞ ] SIGNAL LOCKED</div>
+        <div><span class="dot"></span> SGI_TERMINAL v3.1</div>
+        <div style="color:var(--accent);font-family:ui-monospace,monospace;">SIGNAL INTEGRITY <span id="score-value">092</span></div>
+        <div>[ <span id="hud-count">0</span>/∞ ] LOCKED</div>
     </header>
 
     <main>
-        <div id="sidebar"><div style="font-size:10px;color:#555;margin-bottom:16px;padding-left:8px;">CURRENT REALITIES</div><div id="markets-list"></div></div>
+        <div id="sidebar"><div style="font-size:10px;color:#555;margin-bottom:18px;padding-left:6px;">ACTIVE REALITY SIGNALS</div><div id="markets-list"></div></div>
         
         <div id="terminal">
             <div id="card-container">
                 <div id="reality-core">
                     <div class="card-meta">
-                        <span style="color:#ef4444;">MAR 11 2026</span>
-                        <span id="pm-id">PM-001</span>
+                        <span style="color:#ef4444;">11 MAR 2026</span>
+                        <span id="pm-id">SIG-001</span>
                     </div>
                     <h1 class="card-title" id="r-title"></h1>
                     
                     <div class="data-panel">
-                        <div style="display:flex;justify-content:space-between;margin-bottom:12px;font-size:13px;color:var(--text-secondary);">
-                            <span>PROXY ODDS</span>
-                            <span id="r-odds" style="color:var(--accent-green);font-weight:600;"></span>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:14px;font-size:13px;color:var(--text-secondary);">
+                            <span>PROXY MARKET DELTA</span>
+                            <span id="r-odds" style="color:var(--accent);font-weight:600;"></span>
                         </div>
                         <div class="sparkline">
-                            <svg viewBox="0 0 100 50" preserveAspectRatio="none"><path id="spark-path"/></svg>
+                            <svg viewBox="0 0 100 48" preserveAspectRatio="none"><path id="spark-path"/></svg>
                         </div>
                     </div>
                     
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-                        <button class="btn-strike btn-yes" onclick="strike('YES')">STRIKE YES</button>
-                        <button class="btn-strike btn-no" onclick="strike('NO')">STRIKE NO</button>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+                        <button class="btn-lock btn-yes" onclick="lockSignal('YES')">LOCK YES</button>
+                        <button class="btn-lock btn-no" onclick="lockSignal('NO')">LOCK NO</button>
                     </div>
                 </div>
                 
                 <div id="glass-overlay">
                     <div id="undo-state">
                         <div class="timer-ring" id="timer">3</div>
-                        <div style="color:var(--accent-green);font-size:11px;letter-spacing:2px;margin-bottom:32px;">LOCKING SIGNAL</div>
-                        <button onclick="abort()" style="background:transparent;border:1px solid #555;border-radius:999px;padding:10px 28px;color:#888;cursor:pointer;">ABORT</button>
+                        <div style="color:var(--accent);font-size:11px;letter-spacing:2px;margin-bottom:36px;">SIGNAL LOCKING</div>
+                        <button onclick="abort()" style="background:transparent;border:1px solid #666;border-radius:999px;padding:11px 32px;color:#999;cursor:pointer;font-size:12px;">ABORT</button>
                     </div>
-                    <div id="settled-state" class="hidden" style="text-align:center;max-width:260px;">
-                        <div id="result-status" style="font-size:15px;font-weight:600;margin-bottom:12px;"></div>
-                        <div id="result-text" style="font-size:13.5px;line-height:1.5;color:var(--text-secondary);"></div>
+                    <div id="settled-state" class="hidden" style="text-align:center;max-width:270px;">
+                        <div id="result-status" style="font-size:15px;font-weight:600;margin-bottom:14px;"></div>
+                        <div id="result-text" style="font-size:13.4px;line-height:1.5;color:var(--text-secondary);"></div>
                     </div>
                 </div>
             </div>
         </div>
         
-        <div id="right-panel"><div style="font-size:10px;color:#555;margin-bottom:12px;padding-left:8px;">STRIKE LOG</div><div id="drift-log"></div></div>
+        <div id="right-panel"><div style="font-size:10px;color:#555;margin-bottom:16px;padding-left:6px;">LOCK HISTORY</div><div id="drift-log"></div></div>
     </main>
 
     <script>
         const realities = [
-            {id:"PM-001",title:"Will Bitcoin hit $150,000 before June 30 2026?",yes:58,path:"M0,35 Q20,20 40,28 T60,12 T80,25 T100,8"},
-            {id:"PM-002",title:"Will Arsenal win the Premier League 2025/26?",yes:41,path:"M0,15 Q15,30 35,22 T55,35 T75,18 T100,28"},
-            {id:"PM-003",title:"Will Taylor Swift win Album of the Year at the 2027 Grammys?",yes:72,path:"M0,10 Q25,8 45,18 T65,5 T85,22 T100,15"},
-            {id:"PM-004",title:"Will the Fed cut interest rates in March 2026?",yes:67,path:"M0,25 Q18,12 40,30 T62,18 T80,22 T100,10"},
-            {id:"PM-005",title:"Will Crude Oil reach $105 per barrel by end of March?",yes:33,path:"M0,38 Q12,25 30,35 T55,15 T78,28 T100,20"},
-            {id:"PM-006",title:"Will the next iPhone be released with under-display camera?",yes:49,path:"M0,22 Q20,18 38,30 T60,12 T82,25 T100,19"}
+            {id:"SIG-001",title:"Will Brent Crude close above $95/bbl before March 20?",yes:37,path:"M0,12 Q18,28 35,18 T55,32 T78,15 T100,22"},
+            {id:"SIG-002",title:"Will the US Navy confirm Hormuz escorts before March 18?",yes:64,path:"M0,25 Q15,18 32,28 T58,12 T80,22 T100,8"},
+            {id:"SIG-003",title:"Will China announce full AI chip export ban by April 1?",yes:52,path:"M0,35 Q22,20 40,30 T65,15 T85,25 T100,18"},
+            {id:"SIG-004",title:"Will the Fed cut rates by 50bps or more in March meeting?",yes:71,path:"M0,18 Q12,30 30,14 T55,25 T75,10 T100,20"},
+            {id:"SIG-005",title:"Will NVIDIA reach $4T market cap before June 2026?",yes:29,path:"M0,40 Q20,28 38,35 T62,18 T80,25 T100,12"},
+            {id:"SIG-006",title:"Will a major quantum decryption breach be publicly confirmed this quarter?",yes:44,path:"M0,22 Q15,35 35,20 T60,30 T78,15 T100,28"}
         ];
 
-        let currentIdx = 0, lockedCount = 0, driftScore = 83, currentChoice = "";
+        let currentIdx = 0, lockedCount = 0, signalIntegrity = 92;
         let timerInterval, oddsInterval, audioCtx;
 
         const canvas = document.getElementById('drift-canvas');
@@ -161,8 +151,8 @@
             constructor() { this.reset(); }
             reset() {
                 this.x = Math.random()*w; this.y = Math.random()*h;
-                this.vx = (Math.random()-0.5)*0.8; this.vy = (Math.random()-0.5)*0.8;
-                this.size = Math.random()*2.5+1; this.alpha = Math.random()*0.7+0.4;
+                this.vx = (Math.random()-0.5)*0.45; this.vy = (Math.random()-0.5)*0.45;
+                this.size = Math.random()*1.4 + 0.6;
             }
             update() {
                 this.x += this.vx; this.y += this.vy;
@@ -170,29 +160,16 @@
                 if (this.y<0||this.y>h) this.vy*=-1;
             }
             draw() {
-                ctx.fillStyle = `rgba(52,211,153,${this.alpha})`;
-                ctx.beginPath(); ctx.arc(this.x,this.y,this.size,0,Math.PI*2); ctx.fill();
+                ctx.fillStyle = `rgba(52,211,153,0.55)`;
+                ctx.fillRect(this.x,this.y,this.size,this.size);
             }
         }
 
         function resize() { w=canvas.width=window.innerWidth; h=canvas.height=window.innerHeight; }
-        function initParticles() { particles=[]; for(let i=0;i<110;i++) particles.push(new Particle()); }
+        function initParticles() { particles=[]; for(let i=0;i<68;i++) particles.push(new Particle()); }
         function animateCanvas() {
             ctx.clearRect(0,0,w,h);
             particles.forEach(p=>{p.update();p.draw();});
-            for(let i=0;i<particles.length;i++){
-                for(let j=i+1;j<particles.length;j++){
-                    let dx=particles[i].x-particles[j].x, dy=particles[i].y-particles[j].y;
-                    let dist=Math.sqrt(dx*dx+dy*dy);
-                    if(dist<140){
-                        ctx.strokeStyle=`rgba(52,211,153,${0.15*(140-dist)/140})`;
-                        ctx.lineWidth=0.9; ctx.beginPath();
-                        ctx.moveTo(particles[i].x,particles[i].y);
-                        ctx.lineTo(particles[j].x,particles[j].y);
-                        ctx.stroke();
-                    }
-                }
-            }
             requestAnimationFrame(animateCanvas);
         }
 
@@ -202,7 +179,7 @@
             realities.forEach((r,i)=>{
                 const div = document.createElement('div');
                 div.className = 'market-item';
-                div.innerHTML = `<div style="font-size:10px;color:#666;">${r.id}</div><div style="line-height:1.35;">${r.title}</div>`;
+                div.innerHTML = `<div style="font-size:10px;color:#666;">${r.id}</div><div>${r.title}</div>`;
                 div.onclick = ()=>{ currentIdx=i; renderReality(); };
                 container.appendChild(div);
             });
@@ -215,95 +192,88 @@
             document.getElementById('r-odds').textContent = `${r.yes}% YES`;
             document.getElementById('spark-path').setAttribute('d', r.path);
             document.querySelectorAll('.market-item').forEach((el,i)=>el.classList.toggle('active',i===currentIdx));
-            gsap.fromTo("#card-container",{scale:0.9,rotationX:12,opacity:0},{scale:1,rotationX:0,opacity:1,duration:0.7,ease:"power3.out"});
+            gsap.fromTo("#card-container",{opacity:0,scale:0.92,y:20},{opacity:1,scale:1,y:0,duration:0.65,ease:"power3.out"});
         }
 
         function startLiveOdds() {
             clearInterval(oddsInterval);
             oddsInterval = setInterval(()=>{
                 const r = realities[currentIdx];
-                const change = Math.floor(Math.random()*5)-2;
-                r.yes = Math.max(10,Math.min(90,r.yes+change));
+                r.yes = Math.max(12,Math.min(88,r.yes + (Math.random()*6-3)|0));
                 document.getElementById('r-odds').textContent = `${r.yes}% YES`;
-            },3800);
+            },4200);
         }
 
-        function playBeep(freq,dur,type='sine'){
+        function playBeep(f,d,t='sine'){ 
             if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
             const o=audioCtx.createOscillator(), g=audioCtx.createGain();
-            o.type=type; o.frequency.value=freq; g.gain.value=0.13;
+            o.type=t; o.frequency.value=f; g.gain.value=0.11;
             o.connect(g); g.connect(audioCtx.destination); o.start();
-            setTimeout(()=>o.stop(),dur);
+            setTimeout(()=>o.stop(),d);
         }
 
-        function strike(choice){
-            currentChoice = choice;
+        function lockSignal(choice){
             const overlay = document.getElementById('glass-overlay');
             overlay.classList.add('active');
             document.getElementById('undo-state').classList.remove('hidden');
             document.getElementById('settled-state').classList.add('hidden');
             let sec=3; document.getElementById('timer').textContent=sec;
-            playBeep(820,80);
+            playBeep(760,70);
 
             clearInterval(timerInterval);
             timerInterval = setInterval(()=>{
-                sec--; document.getElementById('timer').textContent=sec; playBeep(620,60);
-                if(sec<=0){ clearInterval(timerInterval); lockStrike(); }
-            },980);
+                sec--; document.getElementById('timer').textContent=sec;
+                if(sec<=0){ clearInterval(timerInterval); executeLock(choice); }
+            },960);
         }
 
         function abort(){
             clearInterval(timerInterval);
             document.getElementById('glass-overlay').classList.remove('active');
-            playBeep(320,140,'sawtooth');
         }
 
-        function lockStrike(){
+        function executeLock(choice){
             lockedCount++;
             document.getElementById('hud-count').textContent = lockedCount;
             const r = realities[currentIdx];
-            const isMinority = (currentChoice==='YES' && r.yes<50) || (currentChoice==='NO' && r.yes>=50);
-            const points = isMinority ? 14 : 6;
-            driftScore = Math.min(99, driftScore + points);
-            document.getElementById('score-value').textContent = String(driftScore).padStart(3,'0');
+            const minority = (choice==='YES' && r.yes<50) || (choice==='NO' && r.yes>=50);
+            const gain = minority ? 15 : 7;
+            signalIntegrity = Math.min(99, signalIntegrity + gain);
+            document.getElementById('score-value').textContent = String(signalIntegrity).padStart(3,'0');
 
-            // log
             const log = document.getElementById('drift-log');
             const entry = document.createElement('div');
             entry.className='log-entry';
-            entry.innerHTML = `<span style="color:${isMinority?'#34d399':'#888'};">${currentChoice}</span> ${r.id} <span style="font-size:11px;color:#555;">+${points}α</span>`;
+            entry.innerHTML = `<span style="color:${minority?'#34d399':'#777'};">${choice}</span> ${r.id} <span style="font-size:11px;color:#555;">+${gain}α</span>`;
             log.prepend(entry);
-            if(log.children.length>7) log.removeChild(log.lastChild);
+            if(log.children.length>8) log.removeChild(log.lastChild);
 
-            // result
             document.getElementById('undo-state').classList.add('hidden');
             const settled = document.getElementById('settled-state');
             settled.classList.remove('hidden');
-            document.getElementById('result-status').textContent = isMinority ? "BETRAYING CONSENSUS" : "ALIGNED";
-            document.getElementById('result-status').style.color = isMinority ? "#34d399" : "#888";
-            document.getElementById('result-text').textContent = isMinority 
-                ? "Maximum alpha extracted." 
-                : "Safe margin locked.";
-            playBeep(isMinority?1240:680,280,'triangle');
+            document.getElementById('result-status').textContent = minority ? "CONSENSUS BREACH" : "ALIGNED";
+            document.getElementById('result-status').style.color = minority ? "#34d399" : "#777";
+            document.getElementById('result-text').textContent = minority 
+                ? "Maximum alpha extracted. Position locked against majority signal."
+                : "Signal aligned. Margin secured.";
+            playBeep(minority?1180:640,320,'triangle');
 
             setTimeout(()=>{
                 document.getElementById('glass-overlay').classList.remove('active');
                 currentIdx = (currentIdx+1)%realities.length;
                 renderReality();
-            },2600);
+            },2800);
         }
 
-        // 3D tilt
         function addTilt(){
             const card = document.getElementById('card-container');
             const term = document.getElementById('terminal');
             term.addEventListener('mousemove', e=>{
-                const rect = card.getBoundingClientRect();
-                const rx = (e.clientY - rect.top)/rect.height - 0.5;
-                const ry = (e.clientX - rect.left)/rect.width - 0.5;
-                card.style.transform = `perspective(1600px) rotateX(${rx*-22}deg) rotateY(${ry*28}deg)`;
+                const rx = (e.clientY - card.getBoundingClientRect().top)/card.offsetHeight - 0.5;
+                const ry = (e.clientX - card.getBoundingClientRect().left)/card.offsetWidth - 0.5;
+                card.style.transform = `perspective(1700px) rotateX(${rx*-14}deg) rotateY(${ry*22}deg)`;
             });
-            term.addEventListener('mouseleave',()=>gsap.to(card,{rotationX:0,rotationY:0,duration:0.9,ease:"power2.out"}));
+            term.addEventListener('mouseleave',()=>gsap.to(card,{rotationX:0,rotationY:0,duration:0.85,ease:"power2.out"}));
         }
 
         window.onload = () => {
@@ -313,8 +283,7 @@
             renderReality();
             startLiveOdds();
             addTilt();
-
-            gsap.from("#score-value",{innerText:0,duration:1.6,snap:{innerText:1},ease:"power2.out"});
+            gsap.from("#score-value",{innerText:0,duration:1.4,snap:{innerText:1}});
         };
     </script>
 </body>
