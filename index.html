@@ -64,8 +64,9 @@
             background:rgba(0,0,0,0.5); border:1px solid var(--border-subtle); border-radius:12px;
             padding:24px; margin-bottom:36px;
         }
-        .sparkline path { stroke:var(--accent-green); stroke-width:3; }
-        
+        .sparkline { width:100%; height:50px; }
+        .sparkline path { stroke:var(--accent-green); stroke-width:3; fill:none; }
+
         .btn-strike {
             padding:22px; border-radius:12px; font-size:15px; font-weight:600;
             cursor:pointer; transition:all 0.3s var(--spring-easing);
@@ -95,11 +96,10 @@
     </header>
 
     <main>
-        <div id="sidebar"></div>
+        <div id="sidebar"><div style="font-size:10px;color:#555;margin-bottom:16px;padding-left:8px;">CURRENT REALITIES</div><div id="markets-list"></div></div>
         
         <div id="terminal">
             <div id="card-container">
-                <!-- reality core + glass overlay same as before but cleaner -->
                 <div id="reality-core">
                     <div class="card-meta">
                         <span style="color:#ef4444;">MAR 11 2026</span>
@@ -141,22 +141,181 @@
     </main>
 
     <script>
-        // v3.0 — Simplified Polymarket-style questions + premium visuals
         const realities = [
-            {id:"PM-001",title:"Will Bitcoin hit $150,000 before June 30 2026?",yes:58,momentum:"+7%",path:"M0,35 Q20,20 40,28 T60,12 T80,25 T100,8"},
-            {id:"PM-002",title:"Will Arsenal win the Premier League 2025/26?",yes:41,momentum:"-3%",path:"M0,15 Q15,30 35,22 T55,35 T75,18 T100,28"},
-            {id:"PM-003",title:"Will Taylor Swift win Album of the Year at the 2027 Grammys?",yes:72,momentum:"+12%",path:"M0,10 Q25,8 45,18 T65,5 T85,22 T100,15"},
-            {id:"PM-004",title:"Will the Fed cut interest rates in March 2026?",yes:67,momentum:"+4%",path:"M0,25 Q18,12 40,30 T62,18 T80,22 T100,10"},
-            {id:"PM-005",title:"Will Crude Oil reach $105 per barrel by end of March?",yes:33,momentum:"VOLATILE",path:"M0,38 Q12,25 30,35 T55,15 T78,28 T100,20"},
-            {id:"PM-006",title:"Will the next iPhone be released with under-display camera?",yes:49,momentum:"NEUTRAL",path:"M0,22 Q20,18 38,30 T60,12 T82,25 T100,19"}
+            {id:"PM-001",title:"Will Bitcoin hit $150,000 before June 30 2026?",yes:58,path:"M0,35 Q20,20 40,28 T60,12 T80,25 T100,8"},
+            {id:"PM-002",title:"Will Arsenal win the Premier League 2025/26?",yes:41,path:"M0,15 Q15,30 35,22 T55,35 T75,18 T100,28"},
+            {id:"PM-003",title:"Will Taylor Swift win Album of the Year at the 2027 Grammys?",yes:72,path:"M0,10 Q25,8 45,18 T65,5 T85,22 T100,15"},
+            {id:"PM-004",title:"Will the Fed cut interest rates in March 2026?",yes:67,path:"M0,25 Q18,12 40,30 T62,18 T80,22 T100,10"},
+            {id:"PM-005",title:"Will Crude Oil reach $105 per barrel by end of March?",yes:33,path:"M0,38 Q12,25 30,35 T55,15 T78,28 T100,20"},
+            {id:"PM-006",title:"Will the next iPhone be released with under-display camera?",yes:49,path:"M0,22 Q20,18 38,30 T60,12 T82,25 T100,19"}
         ];
 
-        // (rest of the JS is identical to v2 but with prettier particles, stronger GSAP, and updated render logic)
-        // Full particle + GSAP + strike logic is the same as v2 but with visual tweaks.
-        // For brevity I kept the structure — copy the full JS from v2 and replace the realities array above.
-        // (If you want the complete 300-line code with all upgrades, reply “send full v3 code” and I’ll drop it instantly.)
+        let currentIdx = 0, lockedCount = 0, driftScore = 83, currentChoice = "";
+        let timerInterval, oddsInterval, audioCtx;
 
-        // Quick note: Open this in Chrome/Firefox full-screen. The new particle field + glass depth hits hard on load.
+        const canvas = document.getElementById('drift-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [], w, h;
+
+        class Particle {
+            constructor() { this.reset(); }
+            reset() {
+                this.x = Math.random()*w; this.y = Math.random()*h;
+                this.vx = (Math.random()-0.5)*0.8; this.vy = (Math.random()-0.5)*0.8;
+                this.size = Math.random()*2.5+1; this.alpha = Math.random()*0.7+0.4;
+            }
+            update() {
+                this.x += this.vx; this.y += this.vy;
+                if (this.x<0||this.x>w) this.vx*=-1;
+                if (this.y<0||this.y>h) this.vy*=-1;
+            }
+            draw() {
+                ctx.fillStyle = `rgba(52,211,153,${this.alpha})`;
+                ctx.beginPath(); ctx.arc(this.x,this.y,this.size,0,Math.PI*2); ctx.fill();
+            }
+        }
+
+        function resize() { w=canvas.width=window.innerWidth; h=canvas.height=window.innerHeight; }
+        function initParticles() { particles=[]; for(let i=0;i<110;i++) particles.push(new Particle()); }
+        function animateCanvas() {
+            ctx.clearRect(0,0,w,h);
+            particles.forEach(p=>{p.update();p.draw();});
+            for(let i=0;i<particles.length;i++){
+                for(let j=i+1;j<particles.length;j++){
+                    let dx=particles[i].x-particles[j].x, dy=particles[i].y-particles[j].y;
+                    let dist=Math.sqrt(dx*dx+dy*dy);
+                    if(dist<140){
+                        ctx.strokeStyle=`rgba(52,211,153,${0.15*(140-dist)/140})`;
+                        ctx.lineWidth=0.9; ctx.beginPath();
+                        ctx.moveTo(particles[i].x,particles[i].y);
+                        ctx.lineTo(particles[j].x,particles[j].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+            requestAnimationFrame(animateCanvas);
+        }
+
+        function buildSidebar() {
+            const container = document.getElementById('markets-list');
+            container.innerHTML = '';
+            realities.forEach((r,i)=>{
+                const div = document.createElement('div');
+                div.className = 'market-item';
+                div.innerHTML = `<div style="font-size:10px;color:#666;">${r.id}</div><div style="line-height:1.35;">${r.title}</div>`;
+                div.onclick = ()=>{ currentIdx=i; renderReality(); };
+                container.appendChild(div);
+            });
+        }
+
+        function renderReality() {
+            const r = realities[currentIdx];
+            document.getElementById('pm-id').textContent = r.id;
+            document.getElementById('r-title').textContent = r.title;
+            document.getElementById('r-odds').textContent = `${r.yes}% YES`;
+            document.getElementById('spark-path').setAttribute('d', r.path);
+            document.querySelectorAll('.market-item').forEach((el,i)=>el.classList.toggle('active',i===currentIdx));
+            gsap.fromTo("#card-container",{scale:0.9,rotationX:12,opacity:0},{scale:1,rotationX:0,opacity:1,duration:0.7,ease:"power3.out"});
+        }
+
+        function startLiveOdds() {
+            clearInterval(oddsInterval);
+            oddsInterval = setInterval(()=>{
+                const r = realities[currentIdx];
+                const change = Math.floor(Math.random()*5)-2;
+                r.yes = Math.max(10,Math.min(90,r.yes+change));
+                document.getElementById('r-odds').textContent = `${r.yes}% YES`;
+            },3800);
+        }
+
+        function playBeep(freq,dur,type='sine'){
+            if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+            const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+            o.type=type; o.frequency.value=freq; g.gain.value=0.13;
+            o.connect(g); g.connect(audioCtx.destination); o.start();
+            setTimeout(()=>o.stop(),dur);
+        }
+
+        function strike(choice){
+            currentChoice = choice;
+            const overlay = document.getElementById('glass-overlay');
+            overlay.classList.add('active');
+            document.getElementById('undo-state').classList.remove('hidden');
+            document.getElementById('settled-state').classList.add('hidden');
+            let sec=3; document.getElementById('timer').textContent=sec;
+            playBeep(820,80);
+
+            clearInterval(timerInterval);
+            timerInterval = setInterval(()=>{
+                sec--; document.getElementById('timer').textContent=sec; playBeep(620,60);
+                if(sec<=0){ clearInterval(timerInterval); lockStrike(); }
+            },980);
+        }
+
+        function abort(){
+            clearInterval(timerInterval);
+            document.getElementById('glass-overlay').classList.remove('active');
+            playBeep(320,140,'sawtooth');
+        }
+
+        function lockStrike(){
+            lockedCount++;
+            document.getElementById('hud-count').textContent = lockedCount;
+            const r = realities[currentIdx];
+            const isMinority = (currentChoice==='YES' && r.yes<50) || (currentChoice==='NO' && r.yes>=50);
+            const points = isMinority ? 14 : 6;
+            driftScore = Math.min(99, driftScore + points);
+            document.getElementById('score-value').textContent = String(driftScore).padStart(3,'0');
+
+            // log
+            const log = document.getElementById('drift-log');
+            const entry = document.createElement('div');
+            entry.className='log-entry';
+            entry.innerHTML = `<span style="color:${isMinority?'#34d399':'#888'};">${currentChoice}</span> ${r.id} <span style="font-size:11px;color:#555;">+${points}α</span>`;
+            log.prepend(entry);
+            if(log.children.length>7) log.removeChild(log.lastChild);
+
+            // result
+            document.getElementById('undo-state').classList.add('hidden');
+            const settled = document.getElementById('settled-state');
+            settled.classList.remove('hidden');
+            document.getElementById('result-status').textContent = isMinority ? "BETRAYING CONSENSUS" : "ALIGNED";
+            document.getElementById('result-status').style.color = isMinority ? "#34d399" : "#888";
+            document.getElementById('result-text').textContent = isMinority 
+                ? "Maximum alpha extracted." 
+                : "Safe margin locked.";
+            playBeep(isMinority?1240:680,280,'triangle');
+
+            setTimeout(()=>{
+                document.getElementById('glass-overlay').classList.remove('active');
+                currentIdx = (currentIdx+1)%realities.length;
+                renderReality();
+            },2600);
+        }
+
+        // 3D tilt
+        function addTilt(){
+            const card = document.getElementById('card-container');
+            const term = document.getElementById('terminal');
+            term.addEventListener('mousemove', e=>{
+                const rect = card.getBoundingClientRect();
+                const rx = (e.clientY - rect.top)/rect.height - 0.5;
+                const ry = (e.clientX - rect.left)/rect.width - 0.5;
+                card.style.transform = `perspective(1600px) rotateX(${rx*-22}deg) rotateY(${ry*28}deg)`;
+            });
+            term.addEventListener('mouseleave',()=>gsap.to(card,{rotationX:0,rotationY:0,duration:0.9,ease:"power2.out"}));
+        }
+
+        window.onload = () => {
+            resize(); initParticles(); animateCanvas();
+            window.addEventListener('resize',()=>{resize();initParticles();});
+            buildSidebar();
+            renderReality();
+            startLiveOdds();
+            addTilt();
+
+            gsap.from("#score-value",{innerText:0,duration:1.6,snap:{innerText:1},ease:"power2.out"});
+        };
     </script>
 </body>
 </html>
